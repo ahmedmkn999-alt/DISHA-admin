@@ -21,13 +21,16 @@
         button { background: #D4AF37; color: black; font-weight: bold; cursor: pointer; transition: 0.3s; }
         button:hover { background: #F4CF57; }
         
+        /* زرار الاستيراد */
+        .magic-btn { background: linear-gradient(45deg, #00c6ff, #0072ff); color: white; border: 1px solid #fff; margin-bottom: 20px; }
+
         /* قائمة المنتجات */
         .product-item { background: #151515; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
         .product-item:hover { background: #222; border-color: #D4AF37; }
         
         h2 { color: #D4AF37; border-bottom: 2px solid #D4AF37; padding-bottom: 10px; margin-top: 30px; }
 
-        /* نافذة التعديل (Edit Modal) */
+        /* نافذة التعديل */
         .edit-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; display: none; justify-content: center; align-items: center; }
         .edit-box { background: #111; padding: 20px; width: 90%; max-width: 400px; border-radius: 10px; border: 1px solid #D4AF37; max-height: 90vh; overflow-y: auto; }
         .edit-img-preview { width: 100px; height: 100px; object-fit: cover; border-radius: 5px; margin: 0 auto 10px auto; display: block; border: 1px solid #555; }
@@ -46,6 +49,12 @@
 
     <div id="dashboard">
         <h3 style="text-align: center; color: #D4AF37;">لوحة القيادة ⚙️</h3>
+
+        <div style="background:#111; padding:15px; border:1px solid #333; border-radius:10px; margin-bottom:20px; text-align:center;">
+            <h4 style="margin:0 0 10px 0; color:#00c6ff;">نقل المنتجات القديمة</h4>
+            <p style="font-size:0.8rem; color:#ccc;">دوس هنا مرة واحدة عشان ترفع الـ 22 منتج للوحة وتتحكم فيهم</p>
+            <button class="magic-btn" onclick="importAll()" id="impBtn">🚀 استيراد كل المنتجات الآن</button>
+        </div>
 
         <h2>➕ إضافة منتج</h2>
         <input type="text" id="pName" placeholder="اسم المنتج">
@@ -107,7 +116,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, orderBy, query } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
-        // إعدادات فايربيس الخاصة بيك
+        // إعدادات فايربيس
         const firebaseConfig = {
             apiKey: "AIzaSyAQuVtULU8APTurAmlkQ9gNyFG_N1Jvq48",
             authDomain: "disha-brand.firebaseapp.com",
@@ -121,10 +130,31 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        let allProducts = []; // لتخزين المنتجات محلياً للسرعة
-        let currentEditId = null; // عشان نعرف بنعدل مين
+        // الداتا القديمة (للنقل)
+        const oldData = [
+            {n:'Hoodie Skull Black', p:600, o:750, t:'top', f:'https://i.postimg.cc/5tmyCWVq/ddf7ab69bd3b4107acc21fe160cecc8e.jpg', b:'https://i.postimg.cc/jjh27Ybc/6e9c779330a243aa9726ab1264d436b7.jpg'},
+            {n:'Sweatshirt Basic White', p:650, o:800, t:'top', f:'https://i.postimg.cc/ydYdhp1j/81b107ef7281417dad506780ee8cdd5d.jpg', b:'https://i.postimg.cc/ydYdhp1j/81b107ef7281417dad506780ee8cdd5d.jpg'},
+            {n:'Hoodie Graphic Off-White', p:600, o:750, t:'top', f:'https://i.postimg.cc/MGYHQJSD/913fce38965c45a6a297f01e01ddd50b.jpg', b:'https://i.postimg.cc/25xyZND0/acbeec02f32e4d6eb68a1c323fed0dda.jpg'},
+            {n:'Sweatshirt Basic Grey', p:650, o:800, t:'top', f:'https://i.postimg.cc/0Q2QGXkf/c603bcbcda67413a83ebcffb745fd8d1.jpg', b:'https://i.postimg.cc/0Q2QGXkf/c603bcbcda67413a83ebcffb745fd8d1.jpg'},
+            {n:'Sweatshirt Basic Black', p:650, o:800, t:'top', f:'https://i.postimg.cc/N0xFHvcb/ef64e6c8b8fe4c388e355eaf81ca510d.jpg', b:'https://i.postimg.cc/N0xFHvcb/ef64e6c8b8fe4c388e355eaf81ca510d.jpg'},
+            {n:'Premium Sweatshirt Black', p:800, o:1000, t:'top', f:'https://i.postimg.cc/3w9pHvdY/fdf4556fed264436ad7d20d231c3c0ff.jpg', b:'https://i.postimg.cc/hjjm4t7H/b99d7c0aa746486eb9e54f8e1e309cef.jpg'},
+            {n:'Hoodie Shine', p:600, o:750, t:'top', f:'https://i.postimg.cc/Xv0Xy5Qj/1000012716.jpg', b:'https://i.postimg.cc/GmR2gq4P/1000012717.jpg'},
+            {n:'Tracksuit Full Set Black', p:900, o:1000, t:'track', f:'https://i.postimg.cc/TPhmfPmd/d42e2e329d3e4c049e3e0c887dce5463.jpg', b:'https://i.postimg.cc/TPhmfPmd/d42e2e329d3e4c049e3e0c887dce5463.jpg'},
+            {n:'Tracksuit Full Set Grey', p:900, o:1000, t:'track', f:'https://i.postimg.cc/pdy8Rd8d/eccd0f68a93241ed84eda8827c2bba92.jpg', b:'https://i.postimg.cc/pdy8Rd8d/eccd0f68a93241ed84eda8827c2bba92.jpg'},
+            {n:'High-End Sweatshirt Set', p:1300, o:1500, t:'track', f:'https://i.postimg.cc/bvdbpvbN/ff9b3cbaab694db8bcf404a4c3c63868.jpg', b:'https://i.postimg.cc/bvdbpvbN/ff9b3cbaab694db8bcf404a4c3c63868.jpg'},
+            {n:'Premium Sweatshirt Set Beige', p:800, o:1000, t:'track', f:'https://i.postimg.cc/xdqHndH8/a31bad4a4c794a1ba0098a7fd72eb982.jpg', b:'https://i.postimg.cc/xdqHndH8/a31bad4a4c794a1ba0098a7fd72eb982.jpg'},
+            {n:'Cargo Pants', p:700, o:800, t:'bottom', f:'https://i.postimg.cc/SK0qNTYx/69f03da0d15e42ce878cd7818fa0b75f.jpg', b:'https://i.postimg.cc/SK0qNTYx/69f03da0d15e42ce878cd7818fa0b75f.jpg'},
+            {n:'Jeans Light Blue', p:600, o:750, t:'bottom', f:'https://i.postimg.cc/zByvgp1V/IMG_20260210_WA0023.jpg', b:'https://i.postimg.cc/j5D27vrD/IMG_20260210_WA0022.jpg'},
+            {n:'Jeans Mod 1', p:600, o:750, t:'bottom', f:'https://i.postimg.cc/TPzMtcWZ/IMG_20260211_WA0000.jpg', b:'https://i.postimg.cc/TPzMtcWZ/IMG_20260211_WA0000.jpg'},
+            {n:'Jeans Mod 2', p:600, o:750, t:'bottom', f:'https://i.postimg.cc/d0kcRfLP/IMG_20260211_WA0001.jpg', b:'https://i.postimg.cc/d0kcRfLP/IMG_20260211_WA0001.jpg'},
+            {n:'Jeans Mod 3', p:600, o:750, t:'bottom', f:'https://i.postimg.cc/8C2QZbr3/IMG_20260211_WA0002.jpg', b:'https://i.postimg.cc/8C2QZbr3/IMG_20260211_WA0002.jpg'},
+            {n:'Jeans Mod 4', p:600, o:750, t:'bottom', f:'https://i.postimg.cc/bv7cmR24/IMG_20260211_WA0003.jpg', b:'https://i.postimg.cc/bv7cmR24/IMG_20260211_WA0003.jpg'},
+            {n:'Jeans Mod 5', p:600, o:750, t:'bottom', f:'https://i.postimg.cc/XJb1Z15q/IMG_20260211_WA0004.jpg', b:'https://i.postimg.cc/Kz2pKpTR/IMG_20260211_WA0005.jpg'}
+        ];
 
-        // 🔐 الحماية
+        let allProducts = [];
+        let currentEditId = null;
+
         window.checkPass = function() {
             if (document.getElementById('passInput').value === "0112838") {
                 localStorage.setItem("dishaAdmin", "true");
@@ -139,113 +169,91 @@
         if(localStorage.getItem("dishaAdmin")) showDash();
         window.logout = function() { localStorage.removeItem("dishaAdmin"); location.reload(); }
 
-        // ➕ إضافة منتج
+        // 🚀 الاستيراد
+        window.importAll = async () => {
+            if(!confirm("جاهز ترفع الـ 22 منتج للوحة؟")) return;
+            const btn = document.getElementById('impBtn');
+            btn.innerText = "جاري الرفع... ⏳"; btn.disabled=true;
+            let c=0;
+            for (let i of oldData) {
+                try {
+                    await addDoc(collection(db, "products"), {
+                        n: i.n, p: Number(i.p), o: Number(i.o), t: i.t, f: i.f, b: i.b||i.f, date: Date.now()+c
+                    }); c++;
+                } catch(e) {}
+            }
+            alert(`تم رفع ${c} منتج بنجاح!`); location.reload();
+        }
+
+        // ➕ إضافة
         document.getElementById('addBtn').addEventListener('click', async () => {
-            const n = document.getElementById('pName').value;
-            const p = document.getElementById('pPrice').value;
-            const t = document.getElementById('pType').value;
-            const f = document.getElementById('pImgF').value;
-            const b = document.getElementById('pImgB').value;
-            
-            if(!n || !p || !f) { alert("اكتب البيانات الأساسية!"); return; }
-            
-            document.getElementById('addBtn').innerText = "جاري النشر...";
+            const n=document.getElementById('pName').value, p=document.getElementById('pPrice').value, f=document.getElementById('pImgF').value;
+            if(!n||!p||!f) { alert("كمل البيانات!"); return; }
+            document.getElementById('addBtn').innerText="جاري...";
             await addDoc(collection(db, "products"), {
-                n, p:Number(p), o:Number(document.getElementById('pOld').value||0), t, f, b:b||f, date: Date.now()
+                n, p:Number(p), o:Number(document.getElementById('pOld').value||0),
+                t:document.getElementById('pType').value, f, b:document.getElementById('pImgB').value||f, date:Date.now()
             });
-            alert("تم النشر!"); 
-            document.getElementById('addBtn').innerText = "نشر المنتج";
-            // تفريغ الحقول
-            document.getElementById('pName').value = '';
-            document.getElementById('pImgF').value = '';
-            loadProducts();
+            alert("تم!"); document.getElementById('addBtn').innerText="نشر المنتج";
+            document.getElementById('pName').value=''; loadProducts();
         });
 
-        // 📋 عرض المنتجات
+        // 📋 عرض
         async function loadProducts() {
             const list = document.getElementById('productsList');
             list.innerHTML = '<p style="text-align:center;">جاري التحميل...</p>';
-            
             const q = query(collection(db, "products"), orderBy("date", "desc"));
             const snap = await getDocs(q);
-            
-            allProducts = [];
-            list.innerHTML = '';
+            allProducts = []; list.innerHTML = '';
             document.getElementById('count').innerText = snap.size;
             
             snap.forEach(d => {
-                const data = d.data();
-                data.id = d.id; // حفظ الـ ID
-                allProducts.push(data);
-
+                const data = d.data(); data.id = d.id; allProducts.push(data);
                 list.innerHTML += `
                     <div class="product-item" onclick="window.openEdit('${d.id}')">
                         <div style="display:flex; align-items:center; gap:10px;">
-                            <img src="${data.f}" style="width:40px; height:40px; border-radius:5px; object-fit:cover;">
-                            <div>
-                                <div style="font-weight:bold; font-size:0.9rem;">${data.n}</div>
-                                <div style="font-size:0.8rem; color:#D4AF37;">${data.p} ج.م</div>
-                            </div>
+                            <img src="${data.f}" style="width:40px; height:40px; border-radius:5px;">
+                            <div><b>${data.n}</b><br><span style="color:#D4AF37">${data.p} ج.م</span></div>
                         </div>
                         <div style="font-size:1.2rem;">✏️</div>
                     </div>`;
             });
         }
 
-        // ✏️ فتح نافذة التعديل
+        // ✏️ تعديل
         window.openEdit = (id) => {
             const p = allProducts.find(x => x.id === id);
             if(!p) return;
-
             currentEditId = id;
             document.getElementById('eName').value = p.n;
             document.getElementById('ePrice').value = p.p;
-            document.getElementById('eOld').value = p.o || '';
+            document.getElementById('eOld').value = p.o||'';
             document.getElementById('eType').value = p.t;
             document.getElementById('eImgF').value = p.f;
-            document.getElementById('eImgB').value = p.b || '';
+            document.getElementById('eImgB').value = p.b||'';
             document.getElementById('ePreview').src = p.f;
-
             document.getElementById('editModal').style.display = 'flex';
         }
 
-        // 💾 حفظ التعديلات
         window.saveEdit = async () => {
             if(!currentEditId) return;
-            const n = document.getElementById('eName').value;
-            const p = document.getElementById('ePrice').value;
-            const f = document.getElementById('eImgF').value;
-
-            if(!n || !p || !f) { alert("ما ينفعش تسيب الاسم أو السعر فاضي"); return; }
-
+            const n=document.getElementById('eName').value, p=document.getElementById('ePrice').value;
             await updateDoc(doc(db, "products", currentEditId), {
-                n: n,
-                p: Number(p),
-                o: Number(document.getElementById('eOld').value || 0),
-                t: document.getElementById('eType').value,
-                f: f,
-                b: document.getElementById('eImgB').value || f
+                n, p:Number(p), o:Number(document.getElementById('eOld').value||0),
+                t:document.getElementById('eType').value,
+                f:document.getElementById('eImgF').value,
+                b:document.getElementById('eImgB').value
             });
-
-            alert("تم التعديل بنجاح ✅");
-            closeEdit();
-            loadProducts(); // تحديث القائمة
+            alert("تم التعديل!"); closeEdit(); loadProducts();
         }
 
-        // 🗑️ حذف المنتج
         window.deleteCurrent = async () => {
-            if(confirm("متأكد إنك عايز تمسح المنتج ده؟ مش هيرجع تاني!")) {
+            if(confirm("مسح نهائي؟")) {
                 await deleteDoc(doc(db, "products", currentEditId));
-                alert("تم الحذف");
-                closeEdit();
-                loadProducts();
+                alert("تم الحذف"); closeEdit(); loadProducts();
             }
         }
-
-        window.closeEdit = () => {
-            document.getElementById('editModal').style.display = 'none';
-            currentEditId = null;
-        }
+        window.closeEdit = () => { document.getElementById('editModal').style.display='none'; }
     </script>
 </body>
 </html>
