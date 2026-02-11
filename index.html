@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم | DISHA ADMIN</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { background: #000; color: white; font-family: 'Cairo'; padding: 0; margin: 0; }
+        
+        /* شاشة تسجيل الدخول */
+        #loginScreen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .login-box { text-align: center; width: 90%; max-width: 300px; }
+        .login-input { width: 100%; padding: 15px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #D4AF37; background: #111; color: white; font-size: 1.2rem; text-align: center; }
+        
+        /* لوحة التحكم */
+        #dashboard { display: none; padding: 20px; max-width: 600px; margin: 0 auto; }
+        
+        /* العناصر العامة */
+        input, select, button { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 5px; border: none; font-size: 1rem; box-sizing: border-box; }
+        input, select { background: #222; color: white; border: 1px solid #444; }
+        button { background: #D4AF37; color: black; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #F4CF57; }
+        
+        .product-item { background: #151515; padding: 15px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .del-btn { background: #c00; color: white; width: auto; padding: 5px 15px; margin: 0; }
+        
+        h2 { color: #D4AF37; border-bottom: 2px solid #D4AF37; padding-bottom: 10px; margin-top: 30px; }
+        .status { text-align: center; margin-bottom: 20px; color: #777; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <div id="loginScreen">
+        <div class="login-box">
+            <h2 style="border:none;">🔐 DISHA ADMIN</h2>
+            <input type="password" id="passInput" class="login-input" placeholder="اكتب كلمة السر">
+            <button onclick="checkPass()">دخول</button>
+        </div>
+    </div>
+
+    <div id="dashboard">
+        <h3 style="text-align: center; color: #D4AF37;">أهلاً يا هندسة 👋</h3>
+        <p class="status">متصل بقاعدة بيانات: disha-brand</p>
+
+        <h2>➕ إضافة منتج جديد</h2>
+        <input type="text" id="pName" placeholder="اسم المنتج (مثال: Hoodie Black)">
+        <input type="number" id="pPrice" placeholder="السعر الحالي (مثال: 600)">
+        <input type="number" id="pOld" placeholder="السعر القديم (اختياري)">
+        
+        <select id="pType">
+            <option value="top">هودي / سويت شيرت (Top)</option>
+            <option value="bottom">بنطلون (Pants)</option>
+            <option value="track">ترنج كامل (Tracksuit)</option>
+        </select>
+        
+        <input type="text" id="pImgF" placeholder="رابط صورة الوش">
+        <input type="text" id="pImgB" placeholder="رابط صورة الضهر (لو مفيش كرر الوش)">
+        
+        <button id="addBtn">نشر المنتج</button>
+
+        <h2>📦 المنتجات الحالية (<span id="count">0</span>)</h2>
+        <button onclick="window.location.reload()" style="background:#333; color:white;">تحديث القائمة 🔄</button>
+        <div id="productsList">جاري التحميل...</div>
+        
+        <br><br>
+        <button onclick="logout()" style="background:#c00; color:white;">تسجيل خروج 🔒</button>
+    </div>
+
+    <script type="module">
+        // 🔥 استيراد مكتبات فايربيس
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, orderBy, query } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        // 🔥 بيانات المشروع الخاصة بيك (أنت بعتها)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAQuVtULU8APTurAmlkQ9gNyFG_N1Jvq48",
+            authDomain: "disha-brand.firebaseapp.com",
+            projectId: "disha-brand",
+            storageBucket: "disha-brand.firebasestorage.app",
+            messagingSenderId: "170505241014",
+            appId: "1:170505241014:web:b3cbea5dcb06624e93c117",
+            measurementId: "G-XL3C1JY6MF"
+        };
+
+        // تشغيل التطبيق
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 🔐 نظام الحماية (Password System)
+        window.checkPass = function() {
+            const pass = document.getElementById('passInput').value;
+            if (pass === "0112838") {
+                localStorage.setItem("dishaAdminAuth", "true");
+                showDashboard();
+            } else {
+                alert("الباسورد غلط يا ريس! ❌");
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            loadProducts(); // تحميل المنتجات لما يدخل
+        }
+
+        window.logout = function() {
+            localStorage.removeItem("dishaAdminAuth");
+            location.reload();
+        }
+
+        // لو كان مسجل دخول قبل كده يدخله علطول
+        if (localStorage.getItem("dishaAdminAuth") === "true") {
+            showDashboard();
+        }
+
+        // ➕ 1. كود إضافة المنتج
+        document.getElementById('addBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('addBtn');
+            const n = document.getElementById('pName').value;
+            const p = document.getElementById('pPrice').value;
+            const o = document.getElementById('pOld').value || 0;
+            const t = document.getElementById('pType').value;
+            const f = document.getElementById('pImgF').value;
+            const b = document.getElementById('pImgB').value;
+
+            if(!n || !p || !f) { alert("ناقص بيانات مهمة (الاسم، السعر، الصورة)!"); return; }
+
+            btn.innerText = "جاري النشر...";
+            btn.disabled = true;
+
+            try {
+                await addDoc(collection(db, "products"), {
+                    n: n, 
+                    p: Number(p), 
+                    o: Number(o), 
+                    t: t, 
+                    f: f, 
+                    b: b || f, // لو مفيش صورة ضهر حط صورة الوش
+                    date: Date.now() // عشان الترتيب بالأحدث
+                });
+                alert("تم النشر بنجاح! ✅");
+                // تفريغ الخانات
+                document.getElementById('pName').value = '';
+                document.getElementById('pImgF').value = '';
+                document.getElementById('pImgB').value = '';
+                loadProducts();
+            } catch (e) {
+                alert("حصل خطأ: " + e.message);
+            }
+            btn.innerText = "نشر المنتج";
+            btn.disabled = false;
+        });
+
+        // 📋 2. عرض المنتجات
+        async function loadProducts() {
+            const list = document.getElementById('productsList');
+            list.innerHTML = '<p style="text-align:center; color:#777">جاري سحب البيانات...</p>';
+            
+            try {
+                // ترتيب بالأحدث (date desc)
+                const q = query(collection(db, "products"), orderBy("date", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                list.innerHTML = '';
+                document.getElementById('count').innerText = querySnapshot.size;
+
+                if (querySnapshot.empty) {
+                    list.innerHTML = '<p style="text-align:center;">مفيش منتجات لسه</p>';
+                    return;
+                }
+
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const div = document.createElement('div');
+                    div.className = 'product-item';
+                    div.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <img src="${data.f}" style="width:50px; height:50px; object-fit:cover; border-radius:5px;">
+                            <div>
+                                <div style="font-weight:bold; color:white;">${data.n}</div>
+                                <div style="font-size:0.8rem; color:#D4AF37;">${data.p} ج.م</div>
+                            </div>
+                        </div>
+                        <button class="del-btn" onclick="window.deleteProduct('${docSnap.id}')">مسح 🗑️</button>
+                    `;
+                    list.appendChild(div);
+                });
+            } catch (e) {
+                list.innerHTML = '<p style="color:red; text-align:center">في مشكلة في التحميل. تأكد إن الإنترنت شغال.</p>';
+                console.error(e);
+            }
+        }
+
+        // ❌ 3. حذف منتج
+        window.deleteProduct = async (id) => {
+            if(confirm('متأكد إنك عايز تمسح المنتج ده نهائي؟')) {
+                try {
+                    await deleteDoc(doc(db, "products", id));
+                    loadProducts(); // تحديث القائمة
+                } catch (e) {
+                    alert("مشكلة في الحذف: " + e.message);
+                }
+            }
+        }
+    </script>
+</body>
+  </html>
+  
