@@ -20,17 +20,18 @@
         /* لوحة التحكم */
         #dashboard { display: none; padding: 20px; max-width: 600px; margin: 0 auto; }
         
-        /* العناصر العامة */
         input, select, button { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 5px; border: none; font-size: 1rem; box-sizing: border-box; }
         input, select { background: #222; color: white; border: 1px solid #444; }
         button { background: #D4AF37; color: black; font-weight: bold; cursor: pointer; transition: 0.3s; }
         button:hover { background: #F4CF57; }
         
-        .product-item { background: #151515; padding: 15px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .product-item { background: #151515; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
         .del-btn { background: #c00; color: white; width: auto; padding: 5px 15px; margin: 0; }
         
         h2 { color: #D4AF37; border-bottom: 2px solid #D4AF37; padding-bottom: 10px; margin-top: 30px; }
-        .status { text-align: center; margin-bottom: 20px; color: #777; font-size: 0.9rem; }
+        
+        /* زرار الاستيراد السحري */
+        .magic-btn { background: linear-gradient(45deg, #00c6ff, #0072ff); color: white; margin-bottom: 30px; border: 1px solid #fff; }
     </style>
 </head>
 <body>
@@ -38,45 +39,43 @@
     <div id="loginScreen">
         <div class="login-box">
             <h2 style="border:none;">🔐 DISHA ADMIN</h2>
-            <input type="password" id="passInput" class="login-input" placeholder="اكتب كلمة السر">
+            <input type="password" id="passInput" class="login-input" placeholder="كلمة السر">
             <button onclick="checkPass()">دخول</button>
         </div>
     </div>
 
     <div id="dashboard">
-        <h3 style="text-align: center; color: #D4AF37;">أهلاً يا هندسة 👋</h3>
-        <p class="status">متصل بقاعدة بيانات: disha-brand</p>
-
-        <h2>➕ إضافة منتج جديد</h2>
-        <input type="text" id="pName" placeholder="اسم المنتج (مثال: Hoodie Black)">
-        <input type="number" id="pPrice" placeholder="السعر الحالي (مثال: 600)">
-        <input type="number" id="pOld" placeholder="السعر القديم (اختياري)">
+        <h3 style="text-align: center; color: #D4AF37;">لوحة القيادة ⚙️</h3>
         
+        <div style="background:#111; padding:15px; border:1px solid #333; border-radius:10px; margin-bottom:20px; text-align:center;">
+            <h4 style="margin:0 0 10px 0; color:#00c6ff;">نقل المنتجات القديمة</h4>
+            <p style="font-size:0.8rem; color:#ccc;">دوس هنا مرة واحدة عشان ترفع الـ 22 منتج للوحة التحكم</p>
+            <button class="magic-btn" onclick="importAll()" id="impBtn">🚀 استيراد كل المنتجات الآن</button>
+        </div>
+
+        <h2>➕ إضافة منتج</h2>
+        <input type="text" id="pName" placeholder="اسم المنتج">
+        <input type="number" id="pPrice" placeholder="السعر">
+        <input type="number" id="pOld" placeholder="السعر القديم">
         <select id="pType">
-            <option value="top">هودي / سويت شيرت (Top)</option>
-            <option value="bottom">بنطلون (Pants)</option>
-            <option value="track">ترنج كامل (Tracksuit)</option>
+            <option value="top">هودي (Top)</option>
+            <option value="bottom">بنطلون (Bottom)</option>
+            <option value="track">ترنج (Track)</option>
         </select>
-        
-        <input type="text" id="pImgF" placeholder="رابط صورة الوش">
-        <input type="text" id="pImgB" placeholder="رابط صورة الضهر (لو مفيش كرر الوش)">
-        
-        <button id="addBtn">نشر المنتج</button>
+        <input type="text" id="pImgF" placeholder="رابط الوش">
+        <input type="text" id="pImgB" placeholder="رابط الضهر">
+        <button id="addBtn">نشر</button>
 
-        <h2>📦 المنتجات الحالية (<span id="count">0</span>)</h2>
-        <button onclick="window.location.reload()" style="background:#333; color:white;">تحديث القائمة 🔄</button>
+        <h2>📦 المنتجات (<span id="count">0</span>)</h2>
         <div id="productsList">جاري التحميل...</div>
-        
-        <br><br>
-        <button onclick="logout()" style="background:#c00; color:white;">تسجيل خروج 🔒</button>
+        <br>
+        <button onclick="logout()" style="background:#c00; color:white;">خروج</button>
     </div>
 
     <script type="module">
-        // 🔥 استيراد مكتبات فايربيس
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, orderBy, query } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
-        // 🔥 بيانات المشروع الخاصة بيك (أنت بعتها)
         const firebaseConfig = {
             apiKey: "AIzaSyAQuVtULU8APTurAmlkQ9gNyFG_N1Jvq48",
             authDomain: "disha-brand.firebaseapp.com",
@@ -87,127 +86,109 @@
             measurementId: "G-XL3C1JY6MF"
         };
 
-        // تشغيل التطبيق
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 🔐 نظام الحماية (Password System)
+        // --- الداتا القديمة (مخزنة هنا مؤقتاً للنقل) ---
+        const oldData = [
+            {n:'Hoodie Skull Black', p:600, o:750, t:'top', f:'https://i.postimg.cc/5tmyCWVq/ddf7ab69bd3b4107acc21fe160cecc8e.jpg', b:'https://i.postimg.cc/jjh27Ybc/6e9c779330a243aa9726ab1264d436b7.jpg'},
+            {n:'Sweatshirt Basic White', p:650, o:800, t:'top', f:'https://i.postimg.cc/ydYdhp1j/81b107ef7281417dad506780ee8cdd5d.jpg', b:'https://i.postimg.cc/ydYdhp1j/81b107ef7281417dad506780ee8cdd5d.jpg'},
+            {n:'Hoodie Graphic Off-White', p:600, o:750, t:'top', f:'https://i.postimg.cc/MGYHQJSD/913fce38965c45a6a297f01e01ddd50b.jpg', b:'https://i.postimg.cc/25xyZND0/acbeec02f32e4d6eb68a1c323fed0dda.jpg'},
+            {n:'Sweatshirt Basic Grey', p:650, o:800, t:'top', f:'https://i.postimg.cc/0Q2QGXkf/c603bcbcda67413a83ebcffb745fd8d1.jpg', b:'https://i.postimg.cc/0Q2QGXkf/c603bcbcda67413a83ebcffb745fd8d1.jpg'},
+            {n:'Sweatshirt Basic Black', p:650, o:800, t:'top', f:'https://i.postimg.cc/N0xFHvcb/ef64e6c8b8fe4c388e355eaf81ca510d.jpg', b:'https://i.postimg.cc/N0xFHvcb/ef64e6c8b8fe4c388e355eaf81ca510d.jpg'},
+            {n:'Premium Sweatshirt Black', p:800, o:1000, t:'top', f:'https://i.postimg.cc/3w9pHvdY/fdf4556fed264436ad7d20d231c3c0ff.jpg', b:'https://i.postimg.cc/hjjm4t7H/b99d7c0aa746486eb9e54f8e1e309cef.jpg'},
+            {n:'Hoodie Shine', p:600, o:750, t:'top', f:'https://i.postimg.cc/Xv0Xy5Qj/1000012716.jpg', b:'https://i.postimg.cc/GmR2gq4P/1000012717.jpg'},
+            {n:'Tracksuit Full Set Black', p:900, o:1000, t:'track', f:'https://i.postimg.cc/TPhmfPmd/d42e2e329d3e4c049e3e0c887dce5463.jpg', b:'https://i.postimg.cc/TPhmfPmd/d42e2e329d3e4c049e3e0c887dce5463.jpg'},
+            {n:'Tracksuit Full Set Grey', p:900, o:1000, t:'track', f:'https://i.postimg.cc/pdy8Rd8d/eccd0f68a93241ed84eda8827c2bba92.jpg', b:'https://i.postimg.cc/pdy8Rd8d/eccd0f68a93241ed84eda8827c2bba92.jpg'},
+            {n:'High-End Sweatshirt Set', p:1300, o:1500, t:'track', f:'https://i.postimg.cc/bvdbpvbN/ff9b3cbaab694db8bcf404a4c3c63868.jpg', b:'https://i.postimg.cc/bvdbpvbN/ff9b3cbaab694db8bcf404a4c3c63868.jpg'},
+            {n:'Premium Sweatshirt Set Beige', p:800, o:1000, t:'track', f:'https://i.postimg.cc/xdqHndH8/a31bad4a4c794a1ba0098a7fd72eb982.jpg', b:'https://i.postimg.cc/xdqHndH8/a31bad4a4c794a1ba0098a7fd72eb982.jpg'},
+            {n:'Cargo Pants', p:700, o:800, t:'bottom', f:'https://i.postimg.cc/SK0qNTYx/69f03da0d15e42ce878cd7818fa0b75f.jpg', b:'https://i.postimg.cc/SK0qNTYx/69f03da0d15e42ce878cd7818fa0b75f.jpg'},
+            {n:'Jeans Light Blue', p:600, o:750, t:'bottom', f:'https://i.postimg.cc/zByvgp1V/IMG_20260210_WA0023.jpg', b:'https://i.postimg.cc/j5D27vrD/IMG_20260210_WA0022.jpg'},
+            {n:'Jeans Mod 1', p:600, o:750, t:'bottom', f:'https://i.postimg.cc/TPzMtcWZ/IMG_20260211_WA0000.jpg', b:'https://i.postimg.cc/TPzMtcWZ/IMG_20260211_WA0000.jpg'},
+            {n:'Jeans Mod 2', p:600, o:750, t:'bottom', f:'https://i.postimg.cc/d0kcRfLP/IMG_20260211_WA0001.jpg', b:'https://i.postimg.cc/d0kcRfLP/IMG_20260211_WA0001.jpg'},
+            {n:'Jeans Mod 3', p:600, o:750, t:'bottom', f:'https://i.postimg.cc/8C2QZbr3/IMG_20260211_WA0002.jpg', b:'https://i.postimg.cc/8C2QZbr3/IMG_20260211_WA0002.jpg'},
+            {n:'Jeans Mod 4', p:600, o:750, t:'bottom', f:'https://i.postimg.cc/bv7cmR24/IMG_20260211_WA0003.jpg', b:'https://i.postimg.cc/bv7cmR24/IMG_20260211_WA0003.jpg'},
+            {n:'Jeans Mod 5', p:600, o:750, t:'bottom', f:'https://i.postimg.cc/XJb1Z15q/IMG_20260211_WA0004.jpg', b:'https://i.postimg.cc/Kz2pKpTR/IMG_20260211_WA0005.jpg'}
+        ];
+
+        // 🔐 الحماية
         window.checkPass = function() {
-            const pass = document.getElementById('passInput').value;
-            if (pass === "0112838") {
-                localStorage.setItem("dishaAdminAuth", "true");
-                showDashboard();
-            } else {
-                alert("الباسورد غلط يا ريس! ❌");
+            if (document.getElementById('passInput').value === "0112838") {
+                localStorage.setItem("dishaAdmin", "true");
+                showDash();
+            } else alert("غلط!");
+        }
+        function showDash() {
+            document.getElementById('loginScreen').style.display='none';
+            document.getElementById('dashboard').style.display='block';
+            loadProducts();
+        }
+        if(localStorage.getItem("dishaAdmin")) showDash();
+        window.logout = function() { localStorage.removeItem("dishaAdmin"); location.reload(); }
+
+        // 🚀 الزرار السحري (الاستيراد)
+        window.importAll = async () => {
+            if(!confirm("جاهز يا هندسة؟ هنرفع كل المنتجات دلوقتي.. دوس OK واستنى ثواني")) return;
+            
+            const btn = document.getElementById('impBtn');
+            btn.innerText = "جاري الرفع... ⏳";
+            btn.disabled = true;
+
+            let count = 0;
+            for (let item of oldData) {
+                try {
+                    await addDoc(collection(db, "products"), {
+                        n: item.n, p: Number(item.p), o: Number(item.o), 
+                        t: item.t, f: item.f, b: item.b || item.f,
+                        date: Date.now() + count // عشان الترتيب
+                    });
+                    count++;
+                } catch(e) { console.log(e); }
             }
-        }
-
-        function showDashboard() {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            loadProducts(); // تحميل المنتجات لما يدخل
-        }
-
-        window.logout = function() {
-            localStorage.removeItem("dishaAdminAuth");
+            alert(`تم رفع ${count} منتج بنجاح! 🎉`);
             location.reload();
         }
 
-        // لو كان مسجل دخول قبل كده يدخله علطول
-        if (localStorage.getItem("dishaAdminAuth") === "true") {
-            showDashboard();
-        }
-
-        // ➕ 1. كود إضافة المنتج
+        // ➕ إضافة يدوي
         document.getElementById('addBtn').addEventListener('click', async () => {
-            const btn = document.getElementById('addBtn');
             const n = document.getElementById('pName').value;
             const p = document.getElementById('pPrice').value;
-            const o = document.getElementById('pOld').value || 0;
+            // باقي البيانات...
             const t = document.getElementById('pType').value;
             const f = document.getElementById('pImgF').value;
             const b = document.getElementById('pImgB').value;
-
-            if(!n || !p || !f) { alert("ناقص بيانات مهمة (الاسم، السعر، الصورة)!"); return; }
-
-            btn.innerText = "جاري النشر...";
-            btn.disabled = true;
-
-            try {
-                await addDoc(collection(db, "products"), {
-                    n: n, 
-                    p: Number(p), 
-                    o: Number(o), 
-                    t: t, 
-                    f: f, 
-                    b: b || f, // لو مفيش صورة ضهر حط صورة الوش
-                    date: Date.now() // عشان الترتيب بالأحدث
-                });
-                alert("تم النشر بنجاح! ✅");
-                // تفريغ الخانات
-                document.getElementById('pName').value = '';
-                document.getElementById('pImgF').value = '';
-                document.getElementById('pImgB').value = '';
-                loadProducts();
-            } catch (e) {
-                alert("حصل خطأ: " + e.message);
-            }
-            btn.innerText = "نشر المنتج";
-            btn.disabled = false;
+            
+            if(!n || !p || !f) { alert("اكتب البيانات!"); return; }
+            await addDoc(collection(db, "products"), {
+                n, p:Number(p), o:Number(document.getElementById('pOld').value||0), t, f, b:b||f, date: Date.now()
+            });
+            alert("تم!"); loadProducts();
         });
 
-        // 📋 2. عرض المنتجات
+        // 📋 عرض المنتجات
         async function loadProducts() {
+            const q = query(collection(db, "products"), orderBy("date", "desc"));
+            const snap = await getDocs(q);
             const list = document.getElementById('productsList');
-            list.innerHTML = '<p style="text-align:center; color:#777">جاري سحب البيانات...</p>';
+            list.innerHTML = '';
+            document.getElementById('count').innerText = snap.size;
             
-            try {
-                // ترتيب بالأحدث (date desc)
-                const q = query(collection(db, "products"), orderBy("date", "desc"));
-                const querySnapshot = await getDocs(q);
-                
-                list.innerHTML = '';
-                document.getElementById('count').innerText = querySnapshot.size;
-
-                if (querySnapshot.empty) {
-                    list.innerHTML = '<p style="text-align:center;">مفيش منتجات لسه</p>';
-                    return;
-                }
-
-                querySnapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    const div = document.createElement('div');
-                    div.className = 'product-item';
-                    div.innerHTML = `
+            snap.forEach(d => {
+                const data = d.data();
+                list.innerHTML += `
+                    <div class="product-item">
                         <div style="display:flex; align-items:center; gap:10px;">
-                            <img src="${data.f}" style="width:50px; height:50px; object-fit:cover; border-radius:5px;">
-                            <div>
-                                <div style="font-weight:bold; color:white;">${data.n}</div>
-                                <div style="font-size:0.8rem; color:#D4AF37;">${data.p} ج.م</div>
-                            </div>
+                            <img src="${data.f}" style="width:40px; height:40px; border-radius:5px;">
+                            <div><b>${data.n}</b><br><small>${data.p}</small></div>
                         </div>
-                        <button class="del-btn" onclick="window.deleteProduct('${docSnap.id}')">مسح 🗑️</button>
-                    `;
-                    list.appendChild(div);
-                });
-            } catch (e) {
-                list.innerHTML = '<p style="color:red; text-align:center">في مشكلة في التحميل. تأكد إن الإنترنت شغال.</p>';
-                console.error(e);
-            }
+                        <button class="del-btn" onclick="window.del('${d.id}')">X</button>
+                    </div>`;
+            });
         }
 
-        // ❌ 3. حذف منتج
-        window.deleteProduct = async (id) => {
-            if(confirm('متأكد إنك عايز تمسح المنتج ده نهائي؟')) {
-                try {
-                    await deleteDoc(doc(db, "products", id));
-                    loadProducts(); // تحديث القائمة
-                } catch (e) {
-                    alert("مشكلة في الحذف: " + e.message);
-                }
-            }
+        window.del = async (id) => {
+            if(confirm("مسح؟")) { await deleteDoc(doc(db, "products", id)); loadProducts(); }
         }
     </script>
 </body>
-  </html>
-  
+</html>
